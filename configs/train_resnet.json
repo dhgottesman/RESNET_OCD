@@ -1,0 +1,38 @@
+{
+    "training": {
+        "epochs": 1,
+        "grad_accum": 8,
+        "grad_clip": 1.0,
+        "loss": "own"
+    },
+    "model": {
+        "weight_name": "fcOut",
+        "name":"resnet"
+    },
+    "checkpoint": {
+        "checkpoint_path": "",
+        "n_checkpoint": 1
+    },
+    "diffusion": {
+        "dropout": 0.4,
+        "diffusion_num_steps": 1000,
+        "diffusion_num_steps_eval": 10,
+        "nch": 128,
+        "out_ch": 1,
+        "ch_mult": [1, 1, 2, 2, 4, 4],
+        "dim_in": 10,
+        "dim_lat_out": 64,
+        "dim_output": 10,
+        "scale":{
+            "ch": 128,
+            "in_dim": 10,
+            "out_dim": 64
+        }
+    },
+    "overfitting": {
+        "lr_overfitting": 5e-4,
+        "n_overfitting": 3
+    }
+
+}
+

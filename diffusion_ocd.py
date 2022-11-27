@@ -4,7 +4,7 @@ from torch import nn
 from torch.nn import functional as F
 from torch.autograd import Variable
 
-import numpy as  np
+import numpy as np
 
 import math
 import torch
@@ -34,7 +34,7 @@ def get_timestep_embedding(timesteps, embedding_dim):
 
 def nonlinearity(x):
     # swish
-    return x*torch.sigmoid(x)
+    return x * torch.sigmoid(x)
 
 
 def Normalize(in_channels):
@@ -122,10 +122,13 @@ class ResnetBlock(nn.Module):
 
     def forward(self, x, temb):
         h = x
+        print("x SHAPE", x.shape)
         h = self.norm1(h)
         h = nonlinearity(h)
         h = self.conv1(h)
 
+        print("H SHAPE", h.shape, "temb", temb.shape, "comp",
+              self.temb_proj(nonlinearity(temb))[:, :, None, None].shape)
         h = h + self.temb_proj(nonlinearity(temb))[:, :, None, None]
 
         h = self.norm2(h)
@@ -139,9 +142,7 @@ class ResnetBlock(nn.Module):
             else:
                 x = self.nin_shortcut(x)
 
-        return x+h
-
-
+        return x + h
 
 
 class AttnBlock(nn.Module):
@@ -180,39 +181,38 @@ class AttnBlock(nn.Module):
 
         # compute attention
         b, c, h, w = q.shape
-        q = q.reshape(b, c, h*w)
-        q = q.permute(0, 2, 1)   # b,hw,c
-        k = k.reshape(b, c, h*w)  # b,c,hw
-        w_ = torch.bmm(q, k)     # b,hw,hw    w[b,i,j]=sum_c q[b,i,c]k[b,c,j]
-        w_ = w_ * (int(c)**(-0.5))
+        q = q.reshape(b, c, h * w)
+        q = q.permute(0, 2, 1)  # b,hw,c
+        k = k.reshape(b, c, h * w)  # b,c,hw
+        w_ = torch.bmm(q, k)  # b,hw,hw    w[b,i,j]=sum_c q[b,i,c]k[b,c,j]
+        w_ = w_ * (int(c) ** (-0.5))
         w_ = torch.nn.functional.softmax(w_, dim=2)
 
         # attend to values
-        v = v.reshape(b, c, h*w)
-        w_ = w_.permute(0, 2, 1)   # b,hw,hw (first hw of k, second of q)
+        v = v.reshape(b, c, h * w)
+        w_ = w_.permute(0, 2, 1)  # b,hw,hw (first hw of k, second of q)
         # b, c,hw (hw of q) h_[b,c,j] = sum_i v[b,c,i] w_[b,i,j]
         h_ = torch.bmm(v, w_)
         h_ = h_.reshape(b, c, h, w)
 
         h_ = self.proj_out(h_)
 
-        return x+h_
-
+        return x + h_
 
 
 class multiloss(nn.Module):
-    def __init__(self,objective_num):
-        super(multiloss,self).__init__()
+    def __init__(self, objective_num):
+        super(multiloss, self).__init__()
         self.objective_num = objective_num
         self.log_var = nn.Parameter(torch.zeros(self.objective_num))
-    
-    def forward(self,losses):
+
+    def forward(self, losses):
         for i in range(len(losses)):
             precision = torch.exp(-self.log_var[i])
             if i == 0:
-                loss = precision*losses[i] + self.log_var[i]
-            else :
-                loss += precision*losses[i] + self.log_var[i]
+                loss = precision * losses[i] + self.log_var[i]
+            else:
+                loss += precision * losses[i] + self.log_var[i]
         return loss
 
 
@@ -223,46 +223,52 @@ class Model_Scale(nn.Module):
         ch = config.diffusion.scale.ch
         in_dim = config.diffusion.scale.in_dim
         out_dim = config.diffusion.scale.out_dim
-        self.mlp = nn.Sequential(nn.Linear(in_dim,ch),nn.SiLU(),nn.Linear(ch,2*ch),nn.SiLU(),nn.Linear(2*ch,4*ch))
-        self.mlp_latin = nn.Sequential(nn.Linear(out_dim,ch),nn.SiLU(),nn.Linear(ch,2*ch),nn.SiLU(),nn.Linear(2*ch,4*ch))
-        self.mlp_scale = nn.Sequential(nn.Linear(8*ch,4*ch),nn.SiLU(),nn.Linear(4*ch,ch),nn.SiLU(),nn.Linear(ch,1),nn.Sigmoid())
+        self.mlp = nn.Sequential(nn.Linear(in_dim, ch), nn.SiLU(), nn.Linear(ch, 2 * ch), nn.SiLU(),
+                                 nn.Linear(2 * ch, 4 * ch))
+        self.mlp_latin = nn.Sequential(nn.Linear(out_dim, ch), nn.SiLU(), nn.Linear(ch, 2 * ch), nn.SiLU(),
+                                       nn.Linear(2 * ch, 4 * ch))
+        self.mlp_scale = nn.Sequential(nn.Linear(8 * ch, 4 * ch), nn.SiLU(), nn.Linear(4 * ch, ch), nn.SiLU(),
+                                       nn.Linear(ch, 1), nn.Sigmoid())
+
     def forward(self, lat, outin):
-        #assert x.shape[2] == x.shape[3] == self.resolutio
+        # assert x.shape[2] == x.shape[3] == self.resolutio
         # timestep embedding
         if 'nerf' not in self.config.model.name:
-            lat,latin = lat
+            lat, latin = lat
         else:
             latin = outin
         latent = self.mlp(lat).mean(0).unsqueeze(0)
         latent_in = self.mlp_latin(latin).mean(0).unsqueeze(0)
-        scale = self.mlp_scale(torch.cat((latent,latent_in),1))
+        scale = self.mlp_scale(torch.cat((latent, latent_in), 1))
         return scale
+
     def load_my_state_dict(self, state_dict):
         own_state = self.state_dict()
         for name, param in state_dict.items():
             if (name not in own_state):
-                    continue
+                continue
             if (own_state[name].shape != param.shape):
                 continue
             if isinstance(param, torch.nn.Parameter):
-                #print(name)
+                # print(name)
                 # backwards compatibility for serialized parameters
                 param = param.data
-            #print(name)
+            # print(name)
             own_state[name].copy_(param)
+
 
 class Model(nn.Module):
     def __init__(self, config=''):
         super().__init__()
-        nch=config.diffusion.nch
-        out_ch=config.diffusion.out_ch
-        ch_mult=config.diffusion.ch_mult
-        dim_in=config.diffusion.dim_in
-        dim_lat_out=config.diffusion.dim_lat_out
-        dim_output=config.diffusion.dim_output
+        nch = config.diffusion.nch
+        out_ch = config.diffusion.out_ch
+        ch_mult = config.diffusion.ch_mult
+        dim_in = config.diffusion.dim_in
+        dim_lat_out = config.diffusion.dim_lat_out
+        dim_output = config.diffusion.dim_output
         ch, out_ch, ch_mult = nch, out_ch, tuple(ch_mult)
         num_res_blocks = 2
-        attn_resolutions = [16,]
+        attn_resolutions = [16, ]
         dropout = config.diffusion.dropout
         in_channels = 1
         resolution = 128
@@ -270,15 +276,15 @@ class Model(nn.Module):
         num_timesteps = 1000
         self.config = config
         if 'nerf' not in self.config.model.name:
-            self.mlp = nn.Sequential(nn.Linear(dim_in,4*ch),nn.SiLU())
-            self.mlp_out = nn.Sequential(nn.Linear(dim_output,4*ch),nn.SiLU())
-            self.mlp_latin = nn.Sequential(nn.Linear(dim_lat_out,4*ch),nn.SiLU())
-            self.codeout = nn.Sequential(nn.Linear(4*ch,4*ch))
+            self.mlp = nn.Sequential(nn.Linear(dim_in, 4 * ch), nn.SiLU())  # 64 -> 512
+            self.mlp_out = nn.Sequential(nn.Linear(dim_output, 4 * ch), nn.SiLU())  # 10 -> 512
+            self.mlp_latin = nn.Sequential(nn.Linear(dim_lat_out, 4 * ch), nn.SiLU())  # 10 -> 512
+            self.codeout = nn.Sequential(nn.Linear(4 * ch, 4 * ch))  # 512 -> 512
         else:
-            self.mlp = nn.Sequential(nn.Linear(dim_in,4*ch))
-            self.mlp_out = nn.Sequential(nn.Linear(dim_output,4*ch))
+            self.mlp = nn.Sequential(nn.Linear(dim_in, 4 * ch))
+            self.mlp_out = nn.Sequential(nn.Linear(dim_output, 4 * ch))
         self.ch = ch
-        self.temb_ch = self.ch*4
+        self.temb_ch = self.ch * 4
         self.num_resolutions = len(ch_mult)
         self.num_res_blocks = num_res_blocks
         self.resolution = resolution
@@ -301,14 +307,14 @@ class Model(nn.Module):
                                        padding=1)
 
         curr_res = resolution
-        in_ch_mult = (1,)+ch_mult
+        in_ch_mult = (1,) + ch_mult
         self.down = nn.ModuleList()
         block_in = None
         for i_level in range(self.num_resolutions):
             block = nn.ModuleList()
             attn = nn.ModuleList()
-            block_in = ch*in_ch_mult[i_level]
-            block_out = ch*ch_mult[i_level]
+            block_in = ch * in_ch_mult[i_level]
+            block_out = ch * ch_mult[i_level]
             for i_block in range(self.num_res_blocks):
                 block.append(ResnetBlock(in_channels=block_in,
                                          out_channels=block_out,
@@ -320,7 +326,7 @@ class Model(nn.Module):
             down = nn.Module()
             down.block = block
             down.attn = attn
-            if i_level != self.num_resolutions-1:
+            if i_level != self.num_resolutions - 1:
                 down.downsample = Downsample(block_in, resamp_with_conv)
                 curr_res = curr_res // 2
             self.down.append(down)
@@ -342,12 +348,12 @@ class Model(nn.Module):
         for i_level in reversed(range(self.num_resolutions)):
             block = nn.ModuleList()
             attn = nn.ModuleList()
-            block_out = ch*ch_mult[i_level]
-            skip_in = ch*ch_mult[i_level]
-            for i_block in range(self.num_res_blocks+1):
+            block_out = ch * ch_mult[i_level]
+            skip_in = ch * ch_mult[i_level]
+            for i_block in range(self.num_res_blocks + 1):
                 if i_block == self.num_res_blocks:
-                    skip_in = ch*in_ch_mult[i_level]
-                block.append(ResnetBlock(in_channels=block_in+skip_in,
+                    skip_in = ch * in_ch_mult[i_level]
+                block.append(ResnetBlock(in_channels=block_in + skip_in,
                                          out_channels=block_out,
                                          temb_channels=self.temb_ch,
                                          dropout=dropout))
@@ -373,19 +379,20 @@ class Model(nn.Module):
     def forward(self, x, lat, out, t):
         x = x.unsqueeze(1)
         if 'nerf' not in self.config.model.name:
-            lat,latin = lat
+            lat, latin = lat
+            print()
             latent = self.mlp(lat).mean(0).unsqueeze(0)
             latent_in = self.mlp_latin(latin).mean(0).unsqueeze(0)
             out_in = self.mlp_out(out)
-            latent = self.codeout(latent+latent_in+out_in)
+            latent = self.codeout(latent + latent_in + out_in)
         else:
             out_in = self.mlp_out(out)
             latent = self.mlp(lat) + out_in
-        
+
         temb = get_timestep_embedding(t, self.ch)
         temb = self.temb.dense[0](temb)
         temb = nonlinearity(temb)
-        temb = self.temb.dense[1](temb)+latent
+        temb = self.temb.dense[1](temb) + latent
         # downsampling
         hs = [self.conv_in(x)]
         for i_level in range(self.num_resolutions):
@@ -394,7 +401,7 @@ class Model(nn.Module):
                 if len(self.down[i_level].attn) > 0:
                     h = self.down[i_level].attn[i_block](h)
                 hs.append(h)
-            if i_level != self.num_resolutions-1:
+            if i_level != self.num_resolutions - 1:
                 hs.append(self.down[i_level].downsample(hs[-1]))
 
         # middle
@@ -405,8 +412,8 @@ class Model(nn.Module):
 
         # upsampling
         for i_level in reversed(range(self.num_resolutions)):
-            for i_block in range(self.num_res_blocks+1):
-                if (len(hs[-1].shape) == 3 ):
+            for i_block in range(self.num_res_blocks + 1):
+                if (len(hs[-1].shape) == 3):
                     hs[-1] = hs[-1].unsqueeze(0)
                 h = self.up[i_level].block[i_block](
                     torch.cat([h, hs.pop()], dim=1), temb)
@@ -419,24 +426,27 @@ class Model(nn.Module):
         h = self.norm_out(h)
         h = nonlinearity(h)
         h = self.conv_out(h)
-        return h#,scale
-    def multiloss(self,loss):
+        return h  # ,scale
+
+    def multiloss(self, loss):
         return self.multiloss_func(loss)
-    def directional_loss(self,w,wdiff,scale,hinfirst,fc1b,hlast):
-        ws = w + wdiff*scale
-        a = F.linear(hinfirst,ws,fc1b)
-        a  = F.relu(a)
-        return F.mse_loss(a,hlast)
+
+    def directional_loss(self, w, wdiff, scale, hinfirst, fc1b, hlast):
+        ws = w + wdiff * scale
+        a = F.linear(hinfirst, ws, fc1b)
+        a = F.relu(a)
+        return F.mse_loss(a, hlast)
+
     def load_my_state_dict(self, state_dict):
         own_state = self.state_dict()
         for name, param in state_dict.items():
             if (name not in own_state):
-                    continue
+                continue
             if (own_state[name].shape != param.shape):
                 continue
             if isinstance(param, torch.nn.Parameter):
-                #print(name)
+                # print(name)
                 # backwards compatibility for serialized parameters
                 param = param.data
-            #print(name)
+            # print(name)
             own_state[name].copy_(param)
