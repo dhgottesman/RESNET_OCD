@@ -94,7 +94,7 @@ elif config.training.loss == 'ce':
     opt_error_loss = torch.nn.CrossEntropyLoss()
 elif config.training.loss == 'own':
     # Change according to desired objective
-    pass
+    opt_error_loss = torch.nn.NLLLoss()
 optimizer = torch.optim.Adam(diffusion_model.parameters(), lr=lr)
 optimizer_scale= torch.optim.Adam(scale_model.parameters(), lr=5*lr)
 ema_helper = EMAHelper(mu=0.9999)
