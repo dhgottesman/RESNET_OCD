@@ -1,10 +1,10 @@
 #! /bin/sh
 
-#SBATCH --job-name=traain_mnist
-#SBATCH --output=/home/yandex/DL20222023a/gottesman3/OCD/train_mnist.out # redirect stdout
-#SBATCH --error=/home/yandex/DL20222023a/gottesman3/OCD/train_mnist.err # redirect stderr
+#SBATCH --job-name=train_resnet
+#SBATCH --output=/home/yandex/DL20222023a/gottesman3/RESNET_OCD/train_output/train_resnet.out # redirect stdout
+#SBATCH --error=/home/yandex/DL20222023a/gottesman3/RESNET_OCD/train_output/train_resnet.err # redirect stderr
 #SBATCH --partition=studentbatch # (see resources section)
-#SBATCH --time=240 # max time (minutes)
+#SBATCH --time=720 # max time (minutes)
 #SBATCH --signal=USR1@120 # how to end job when time’s up
 #SBATCH --nodes=1 # number of machines
 #SBATCH --ntasks=1 # number of processes
