@@ -72,7 +72,7 @@ if __name__ == '__main__':
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     lr = args.learning_rate  # learning rate for the diffusion model & scale estimation model
 
-    train_loader, test_loader, base_model = wrapper_dataset(config, args, device)
+    _, test_loader, base_model = wrapper_dataset(config, args, device)
 
     # path to desired pretrained base model
     module_path = args.backbone_path
@@ -81,11 +81,11 @@ if __name__ == '__main__':
 
     # OCD + model
     diffusion_model = Model(config=config).cuda()
-    loss_fn = torch.nn.MSELoss()
     scale_model = Model_Scale(config=config).cuda()
     diffusion_model.load_my_state_dict(torch.load(args.diffusion_model_path, map_location=device))
     scale_model.load_my_state_dict(torch.load(args.scale_model_path, map_location=device))
 
     print("Accuracy of diffusion model: {}".format(evaluate(diffusion_model, test_loader, device)))
+    print("Accuracy of scale model: {}".format(evaluate(scale_model, test_loader, device)))
     print("Accuracy of base model: {}".format(evaluate(base_model, test_loader, device)))
 
