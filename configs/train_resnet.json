@@ -1,6 +1,6 @@
 {
     "training": {
-        "epochs": 1,
+        "epochs": 100,
         "grad_accum": 8,
         "grad_clip": 1.0,
         "loss": "own"

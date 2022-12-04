@@ -122,13 +122,10 @@ class ResnetBlock(nn.Module):
 
     def forward(self, x, temb):
         h = x
-        print("x SHAPE", x.shape)
         h = self.norm1(h)
         h = nonlinearity(h)
         h = self.conv1(h)
 
-        print("H SHAPE", h.shape, "temb", temb.shape, "comp",
-              self.temb_proj(nonlinearity(temb))[:, :, None, None].shape)
         h = h + self.temb_proj(nonlinearity(temb))[:, :, None, None]
 
         h = self.norm2(h)
@@ -380,7 +377,6 @@ class Model(nn.Module):
         x = x.unsqueeze(1)
         if 'nerf' not in self.config.model.name:
             lat, latin = lat
-            print()
             latent = self.mlp(lat).mean(0).unsqueeze(0)
             latent_in = self.mlp_latin(latin).mean(0).unsqueeze(0)
             out_in = self.mlp_out(out)

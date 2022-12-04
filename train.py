@@ -100,8 +100,6 @@ def train(args, config, optimizer, optimizer_scale,
                 encoding_out = vgg_encode(outin)
             else:
                 encoding_out = outin
-            print("F.pad", F.pad(weight_noisy, (padding[1][0], padding[1][1], padding[0][0], padding[0][1])).shape,
-                  "hfirst", hfirst[0].shape, hfirst[1].shape, "encoding_out", encoding_out.shape)
             estimated_error = diffusion_model(
                 F.pad(weight_noisy, (padding[1][0], padding[1][1], padding[0][0], padding[0][1])),
                 hfirst,
