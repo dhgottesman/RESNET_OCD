@@ -100,6 +100,9 @@ optimizer_scale= torch.optim.Adam(scale_model.parameters(), lr=5*lr)
 ema_helper = EMAHelper(mu=0.9999)
 ema_helper.register(diffusion_model)
 
+model.eval()
+diffusion_model.eval()
+
 ################################################# Check if weight is OK ##########################
 weight_name = config.model.weight_name
 dmodel_original_weight = deepcopy(model.get_parameter(weight_name+'.weight'))
@@ -177,14 +180,24 @@ for idx, batch in enumerate(test_loader):
     lbaseline += lbase
 
     pdiff, popt, pbaseline = predictions
+    _, pdiff = torch.max(pdiff.data, 1)
+    _, popt = torch.max(popt.data, 1)
+    _, pbaseline = torch.max(pbaseline.data, 1)
+
+
     labels = batch['output']
     y_true = np.concatenate((y_true, labels.cpu()))
     y_diff = np.concatenate((y_diff, pdiff.cpu()))
     y_opt = np.concatenate((y_opt, popt.cpu()))
-    y_base = np.concatenate(y_base, pbaseline.cpu())
+    y_base = np.concatenate((y_base, pbaseline.cpu()))
+
+    diff_error = np.sum(y_diff != y_true) / len(y_true)
+    opt_error = np.sum(y_diff != y_true) / len(y_true)
+    base_error = np.sum(y_diff != y_true) / len(y_true)
+    print("Processed {} test examples so far {} {} {} {} {} {}| ".format(idx, 1-diff_error, 1-opt_error, 1-base_error, ldiff, lopt, lbaseline), flush=True)
 
 diff_error = np.sum(y_diff != y_true) / len(y_true)
 opt_error = np.sum(y_diff != y_true) / len(y_true)
 base_error = np.sum(y_diff != y_true) / len(y_true)
-print("Diffusion Error {}, Optimal Error {}, Base Error {}".format(diff_error, opt_error, base_error))
+print("Diffusion Accuracy {}, Optimal Accuracy {}, Base Accuracy {}".format(1-diff_error, 1-opt_error, 1-base_error), flush=True)
 # print(f"\rBaseline loss {lbaseline/(idx+1)}, Overfitted loss {lopt/(idx+1)}, Diffusion loss {ldiff/(idx+1)}",end='')
