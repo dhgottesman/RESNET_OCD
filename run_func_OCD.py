@@ -140,6 +140,11 @@ else:
 
 print('*'*100)
 ldiff,lopt,lbaseline = 0,0,0
+y_true = np.array([], dtype=np.int)
+y_diff = np.array([], dtype=np.int)
+y_opt = np.array([], dtype=np.int)
+y_base = np.array([], dtype=np.int)
+
 for idx, batch in enumerate(test_loader):
     batch['input'] = batch['input'].to(device)
     batch['output'] = batch['output'].to(device)
@@ -160,7 +165,7 @@ for idx, batch in enumerate(test_loader):
         encoding_out = outin
     with torch.no_grad():
         std = scale_model(hfirst,encoding_out)
-    ldiffusion, loptimal, lbase, wdiff = generalized_steps(
+    ldiffusion, loptimal, lbase, wdiff, predictions = generalized_steps(
         named_parameter=weight_name, numstep=config.diffusion.diffusion_num_steps_eval,
         x=(diff_weight.unsqueeze(0),hfirst,encoding_out), model=diffusion_model,
         bmodel=model, batch=batch, loss_fn=opt_error_loss,
@@ -170,4 +175,16 @@ for idx, batch in enumerate(test_loader):
     ldiff += ldiffusion
     lopt += loptimal
     lbaseline += lbase
-    print(f"\rBaseline loss {lbaseline/(idx+1)}, Overfitted loss {lopt/(idx+1)}, Diffusion loss {ldiff/(idx+1)}",end='')
+
+    pdiff, popt, pbaseline = predictions
+    labels = batch['output']
+    y_true = np.concatenate((y_true, labels.cpu()))
+    y_diff = np.concatenate((y_diff, pdiff.cpu()))
+    y_opt = np.concatenate((y_opt, popt.cpu()))
+    y_base = np.concatenate(y_base, pbaseline.cpu())
+
+diff_error = np.sum(y_diff != y_true) / len(y_true)
+opt_error = np.sum(y_diff != y_true) / len(y_true)
+base_error = np.sum(y_diff != y_true) / len(y_true)
+print("Diffusion Error {}, Optimal Error {}, Base Error {}".format(diff_error, opt_error, base_error))
+# print(f"\rBaseline loss {lbaseline/(idx+1)}, Overfitted loss {lopt/(idx+1)}, Diffusion loss {ldiff/(idx+1)}",end='')
