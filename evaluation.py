@@ -55,15 +55,17 @@ def evaluate(model, data_loader, device):
     y_pred = np.array([], dtype=np.int)
 
     with torch.no_grad():
-        for data in data_loader:
-            inputs, labels = data
+        for batch in data_loader:
+            inputs, labels = batch['input'], batch['output']
             inputs, labels = inputs.to(device), labels.to(device)
+            inputs = inputs.to(device)
             outputs = model(inputs)
             _, predicted = torch.max(outputs.data, 1)
+            print("PREDICTED", predicted, "LABEL", label)
 
             y_true = np.concatenate((y_true, labels.cpu()))
             y_pred = np.concatenate((y_pred, predicted.cpu()))
-
+            break
     error = np.sum(y_pred != y_true) / len(y_true)
     return error
 
