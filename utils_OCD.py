@@ -214,7 +214,7 @@ def check_ps(named_parameter='', bmodel=None, w=0,
     loss = loss_fn(predicted_labels, batch['output'].long())
     ldiffusion = loss.item()
     del model
-    return ldiffusion, loptimal, lbase, (base_predictions, optimal_predictions,diffusion_predictions)
+    return ldiffusion, loptimal, lbase, (diffusion_predictions, optimal_predictions, base_predictions)
 
 
 def check_ps_wrapper(isnerf=0, named_parameter='', bmodel=None, w=0,

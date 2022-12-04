@@ -143,11 +143,9 @@ else:
 
 print('*'*100)
 ldiff,lopt,lbaseline = 0,0,0
-y_true = np.array([], dtype=np.int)
-y_diff = np.array([], dtype=np.int)
-y_opt = np.array([], dtype=np.int)
-y_base = np.array([], dtype=np.int)
-
+base_correct_items = 0
+diff_correct_items = 0
+total_items = 0
 for idx, batch in enumerate(test_loader):
     batch['input'] = batch['input'].to(device)
     batch['output'] = batch['output'].to(device)
@@ -179,25 +177,18 @@ for idx, batch in enumerate(test_loader):
     lopt += loptimal
     lbaseline += lbase
 
-    pdiff, popt, pbaseline = predictions
-    _, pdiff = torch.max(pdiff.data, 1)
-    _, popt = torch.max(popt.data, 1)
-    _, pbaseline = torch.max(pbaseline.data, 1)
+    base_predictions, _ = model(batch['input'])
 
+    _, pdiff, _ = predictions
+    pdiff = torch.argmax(pdiff, 1)
+    base_predictions = torch.argmax(base_predictions, 1)
 
     labels = batch['output']
-    y_true = np.concatenate((y_true, labels.cpu()))
-    y_diff = np.concatenate((y_diff, pdiff.cpu()))
-    y_opt = np.concatenate((y_opt, popt.cpu()))
-    y_base = np.concatenate((y_base, pbaseline.cpu()))
+    base_correct_items += base_predictions.eq(labels).sum().item()
+    diff_correct_items += pdiff.eq(labels).sum().item()
+    total_items += labels.size(0)
 
-    diff_error = np.sum(y_diff != y_true) / len(y_true)
-    opt_error = np.sum(y_diff != y_true) / len(y_true)
-    base_error = np.sum(y_diff != y_true) / len(y_true)
-    print("Processed {} test examples so far {} {} {} {} {} {}| ".format(idx, 1-diff_error, 1-opt_error, 1-base_error, ldiff, lopt, lbaseline), flush=True)
+    if idx % 50 == 0:
+        print("Processed {} test examples so far Base: {}, Diff: {}".format(idx, base_correct_items/total_items, diff_correct_items/total_items))
 
-diff_error = np.sum(y_diff != y_true) / len(y_true)
-opt_error = np.sum(y_diff != y_true) / len(y_true)
-base_error = np.sum(y_diff != y_true) / len(y_true)
-print("Diffusion Accuracy {}, Optimal Accuracy {}, Base Accuracy {}".format(1-diff_error, 1-opt_error, 1-base_error), flush=True)
-# print(f"\rBaseline loss {lbaseline/(idx+1)}, Overfitted loss {lopt/(idx+1)}, Diffusion loss {ldiff/(idx+1)}",end='')
+print("DONE base {} diff {}".format(base_correct_items/total_items, diff_correct_items/total_items))
