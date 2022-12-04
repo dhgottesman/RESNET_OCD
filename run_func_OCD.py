@@ -189,6 +189,6 @@ for idx, batch in enumerate(test_loader):
     total_items += labels.size(0)
 
     if idx % 50 == 0:
-        print("Processed {} test examples so far Base: {}, Diff: {}".format(idx, base_correct_items/total_items, diff_correct_items/total_items))
+        print("Processed {} test examples so far Base Accuracy: {}, Diff Accuracy: {}".format(idx, base_correct_items/total_items, diff_correct_items/total_items))
 
-print("DONE base {} diff {}".format(base_correct_items/total_items, diff_correct_items/total_items))
+print("FINAL Base Accuracy: {}, Diff Accuracy: {}".format(base_correct_items/total_items, diff_correct_items/total_items))
