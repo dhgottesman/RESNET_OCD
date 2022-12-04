@@ -9,6 +9,11 @@ srun --mem=100000 --partition=studentrun --cpus-per-task=4 --gpus=2  python run_
 srun --mem=100000 --partition=studentrun --cpus-per-task=4 --gpus=2 python run_func_OCD.py -e 1 -t 0 -pb ./base_models/resnet20.pt -pc ./configs/train_resnet.json -pdtr ./data/cifar10 -pdts ./data/cifar10 -dt resnet -prc 0 -pd model_checkpoint_epoch0_step50000_dataresnet.pt -ps scale_model_checkpoint_epoch0_loss50000_dataresnet.pt
 ```
 
+**5. for testing resnet20-OCD**<br />
+```
+sbatch test.slurm
+```
+
 ## OCD Learning to Overfit with Conditional Diffusion Models🪐<br><sub>Official PyTorch Implementation</sub>
 [![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/ocd-learning-to-overfit-with-conditional/few-shot-text-classification-on-average-on)](https://paperswithcode.com/sota/few-shot-text-classification-on-average-on?p=ocd-learning-to-overfit-with-conditional)
 [![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/ocd-learning-to-overfit-with-conditional/image-classification-on-tiny-imagenet-1)](https://paperswithcode.com/sota/image-classification-on-tiny-imagenet-1?p=ocd-learning-to-overfit-with-conditional)
